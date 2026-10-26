@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>أداة المسافة والاتجاه الباليستية الموحدة</title>
+    <!-- استدعاء مكتبة الخرائط العالمية المفتوحة Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <link rel="stylesheet" href="style.css">
+    <script src="database.js"></script>
+    <script src="app.js" defer></script>
+    <script src="script.js" defer></script>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="header-title">🎯 المنظومة الجغرافية والباليستية الموحدة</div>
+        <div class="equipment-menu-wrap">
+            <button type="button" id="equipmentMenuButton" class="menu-btn" aria-expanded="false" aria-controls="equipmentMenu">⋮</button>
+            <div id="equipmentMenu" class="equipment-menu" hidden>
+                <label for="mortarType">عيار الهاون</label>
+                <select id="mortarType" onchange="updateShellOptions()"></select>
+                <button type="button" class="menu-action-btn" onclick="showEquipmentData()">عرض البيانات</button>
+            </div>
+        </div>
+    </header>
+
+    <div id="tableModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">📊 تدقيق جدول الـ 14 سطراً النشط</span>
+                <span class="close-btn" onclick="closeTableModal()">&times;</span>
+            </div>
+            <div class="modal-body" id="modalTableBody"></div>
+        </div>
+    </div>
+
+    <div class="container">
+
+        <!-- ================================================================= -->
+        <!-- الواجهة الأولى: واجهة الخريطة والإحداثيات والعتاد (الرئيسية) -->
+        <!-- ================================================================= -->
+        <section id="interface-map" class="app-interface">
+            
+            <div class="card">
+                <div class="card-title">🌐 إحداثيات المواقع ونوع القذيفة والحشوة</div>
+                <div class="form-row">
+                    <div class="coord-block">
+                        <span class="block-label">📍 النقطة A (موقع الهاون)</span>
+                        <div class="input-inline">
+                            <input type="number" id="latA" placeholder="خط العرض Lat" step="any" value="13.5800">
+                            <input type="number" id="lonA" placeholder="خط الطول Lon" step="any" value="44.0200">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="coord-block">
+                        <span class="block-label">🎯 النقطة B (الهدف / الوجهة)</span>
+                        <div class="input-inline">
+                            <input type="number" id="latB" placeholder="خط العرض Lat" step="any" value="13.5820">
+                            <input type="number" id="lonB" placeholder="خط الطول Lon" step="any" value="44.0220">
+                        </div>
+                    </div>
+                </div>
+                <div class="button-row">
+                    <button type="button" class="btn-secondary" id="btnMyPosition">موقعي الحالي ← A</button>
+                    <button type="button" class="btn-secondary" id="btnSwap">تبديل A/B 🔄</button>
+                </div>
+                
+                <!-- حقول السلاح المقيدة والمفتوحة بالواجهة الرئيسية بناء على طلبك -->
+                <div class="form-group-ballistic">
+                    <label>نوع القذيفة العسكرية:</label>
+                    <select id="shellType" onchange="updateChargeOptions()"></select>
+                </div>
+                <div class="form-group-ballistic">
+                    <label>رقم الحشوة الدافعة:</label>
+                    <select id="chargeType"></select>
+                </div>
+
+                <button type="button" class="btn-primary-wide" id="btnUpdateMap" style="margin-top: 10px;">عرض وتحديث الخريطة وحساب المسافة 🗺️</button>
+            </div>
+
+            <!-- كرت الخريطة التفاعلية المتعددة الطبقات -->
+            <div class="card map-card">
+                <div id="map" style="height: 320px; border-radius: 8px;">
+                    <button type="button" id="mapCenterControl" class="map-center-control" aria-label="خيارات مركز الخريطة">•</button>
+                    <div id="mapCenterMenu" class="map-center-menu" hidden>
+                        <button type="button" id="setDestinationBtn">تعيين كوجهة</button>
+                        <button type="button" id="clearDestinationBtn">إلغاء تعيين الوجهة</button>
+                        <button type="button" id="addMapLabelBtn">إضافة علامة وتسمية</button>
+                    </div>
+                </div>
+                <div id="mapCenterReadout" class="map-instruction">مركز الخريطة: --</div>
+                <div id="mapStatus" class="map-instruction">حرّك الخريطة، ثم اضغط نقطة المركز لاختيار إجراء.</div>
+            </div>
+
+            <div class="card geo-results-card">
+                <div class="geo-output">
+                    <div class="geo-box">
+                        <span class="geo-label">المسافة الأفقية</span>
+                        <span class="geo-val" id="geoDistance">--</span><span class="geo-unit">متر</span>
+                    </div>
+                    <div class="geo-box">
+                        <span class="geo-label">الاتجاه من الشمال</span>
+                        <span class="geo-val" id="geoAzimuth">--</span><span class="geo-unit">درجة</span>
+                    </div>
+                    <div class="geo-box">
+                        <span class="geo-label">فرق الارتفاع العمودي</span>
+                        <span class="geo-val" id="geoElevation">--</span><span class="geo-unit">متر</span>
+                    </div>
+                </div>
+            </div>
+
+            <button type="button" class="btn-navigation-next" onclick="navigateToInterface(2)">
+                تثبيت المؤشرات الجغرافية والانتقال للمعالجة الباليستية ➡️
+            </button>
+        </section>
+        <!-- ================================================================= -->
+        <!-- الواجهة الثانية: واجهة المعالجة الباليستية وكروت الحساسات -->
+        <!-- ================================================================= -->
+        <section id="interface-ballistics" class="app-interface" style="display: none;">
+            <button type="button" class="btn-back-nav" onclick="navigateToInterface(1)">⬅️ العودة لتعديل الخريطة</button>
+            <div class="card">
+                <div class="card-title">📍 معطيات الهدف الجغرافية (قابلة للتعديل)</div>
+                <div class="map-instruction" id="receivedBearing">الاتجاه المستلم: —</div>
+                <div class="form-group-ballistic">
+                    <label>المسافة الأفقية المستلمة (متر):</label>
+                    <input type="number" id="targetRange" value="200">
+                </div>
+                <div class="form-group-ballistic">
+                    <label>فرق الارتفاع المستلم (متر):</label>
+                    <input type="number" id="elevationDiff" value="0">
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">🌡️ قراءات الحساسات وتصحيحات الطقس</div>
+                <div class="form-group-ballistic">
+                    <label>درجة الحرارة الجوية المحيطة (°م):</label>
+                    <input type="number" id="currentTemp" value="35">
+                </div>
+                <div class="form-group-ballistic">
+                    <label>فارق الضغط الجوي الحالي (ملم زئبق):</label>
+                    <input type="number" id="currentPressDiff" value="-10">
+                </div>
+                <div class="form-group-ballistic">
+                    <label>سرعة الرياح الجانبية الفعالة (م/ثا):</label>
+                    <input type="number" id="windSpeedSide" value="5">
+                </div>
+                <div class="form-group-ballistic">
+                    <label>سرعة الرياح الرأسية الفعالة (م/ثا):</label>
+                    <input type="number" id="windSpeedHead" value="5">
+                </div>
+                <div class="form-group-ballistic">
+                    <label>فارق السرعة للسبطانة (سخونة المدفع م/ثا):</label>
+                    <input type="number" id="speedDrop" value="-2">
+                </div>
+            </div>
+            <button type="button" class="btn-calc-execute" onclick="executeBallisticSystem()">
+                OK — احسب واعرض الخرج الباليستي النهائي 🎯
+            </button>
+        </section>
+
+        <!-- ================================================================= -->
+        <!-- الواجهة الثالثة والاخيرة: شاشة العرض الرقمية والخرج النهائي -->
+        <!-- ================================================================= -->
+        <section id="interface-outputs" class="app-interface" style="display: none;">
+            <button type="button" class="btn-back-nav" onclick="navigateToInterface(2)">⬅️ تعديل معطيات الحساسات والطقس</button>
+            <div class="output-screen">
+                <div class="screen-header">📟 لوحة التوجيه الرقمية العسكرية الجاهزة</div>
+                <div class="output-row-main">
+                    <div class="output-block-primary">
+                        <span class="out-label">الزاوية الرأسية النهائية (الارتفاع بالدرجات)</span>
+                        <div class="out-val-large" id="outVerticalDeg">-- درجة و -- دقيقة</div>
+                        <span class="out-label">الزاوية الرأسية بالمليم (1/6000 مل)</span>
+                        <div class="out-val-sub" id="outVerticalMil" style="font-size: 1.5rem; margin-top: 5px;">-- مليم (مل)</div>
+                    </div>
+                </div>
+                <div class="output-row-main">
+                    <div class="output-block-primary accent-block">
+                        <span class="out-label">الزاوية الأفقية النهائية (الاتجاه المعدل للبوصلة)</span>
+                        <div class="out-val-large" id="outHorizontalDeg">-- درجة و -- دقيقة</div>
+                    </div>
+                </div>
+                <div class="output-grid-secondary">
+                    <div class="out-mini-box highlight-box">
+                        <span class="mini-label">طبلة الارتفاع النهائية</span>
+                        <span class="mini-val" id="outDrum">--</span>
+                        <span class="mini-unit">قسم</span>
+                    </div>
+                    <div class="out-mini-box">
+                        <span class="mini-label">زمن طيران القذيفة</span>
+                        <span class="mini-val" id="outFlightTime">--</span>
+                        <span class="mini-unit">ثانية</span>
+                    </div>
+                    <div class="out-mini-box">
+                        <span class="mini-label">سهم المعركة (أعلى ارتفاع)</span>
+                        <span class="mini-val" id="outMaxHeight">--</span>
+                        <span class="mini-unit">متر</span>
+                    </div>
+                    <div class="out-mini-box">
+                        <span class="mini-label">زاوية السقوط</span>
+                        <span class="mini-val" id="outFallAngle">--</span>
+                        <span class="mini-unit">مليم</span>
+                    </div>
+                </div>
+                <div class="screen-footer-details" id="calculationSummaryLog">
+                    جاري استعراض ملخص التصحيحات الباليستية المطبقة...
+                </div>
+            </div>
+            <button type="button" class="btn-primary-wide" onclick="navigateToInterface(1)" style="margin-top: 20px; background-color: var(--secondary-color);">
+                🔄 العودة إلى شاشة الخريطة لبدء مهمة جديدة
+            </button>
+        </section>
+
+    </div>
+
+</body>
+</html>
